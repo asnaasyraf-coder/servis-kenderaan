@@ -4,42 +4,110 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rekod Servis</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef1f2;
+      color: #16252e;
+      margin: 0;
+      padding: 16px;
+    }
+    .bekas {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    h1 { margin-top: 0; }
+    .kotak {
+      background: white;
+      border: 1px solid #d3dbdf;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #5d6f78;
+    }
+    input {
+      display: block;
+      width: 100%;
+      padding: 9px 10px;
+      margin-top: 4px;
+      font-size: 16px;
+      border: 1px solid #d3dbdf;
+      border-radius: 6px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #0b6e79;
+      color: white;
+      border: 0;
+      border-radius: 6px;
+      padding: 10px 18px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button.padam {
+      background: #b3261e;
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+    .jadual {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      text-align: left;
+      padding: 9px 8px;
+      border-bottom: 1px solid #d3dbdf;
+    }
+    th { color: #5d6f78; font-size: 14px; }
+    .jumlah {
+      font-size: 18px;
+      margin: 12px 0 0;
+    }
+  </style>
 </head>
 <body>
-  <h1>Rekod Servis Kenderaan</h1>
+  <div class="bekas">
+    <h1>Rekod Servis Kenderaan</h1>
 
-  <form id="borang">
-    <p>
-      <label>Tarikh<br>
-        <input id="date" type="date" required>
-      </label>
-    </p>
-    <p>
-      <label>Odometer (km)<br>
-        <input id="odo" type="number" required>
-      </label>
-    </p>
-    <p>
-      <label>Jenis servis<br>
-        <input id="type" placeholder="cth. Tukar minyak enjin" required>
-      </label>
-    </p>
-    <p>
-      <label>Kos (RM)<br>
-        <input id="cost" type="number" step="0.01" required>
-      </label>
-    </p>
-    <button type="submit">Simpan</button>
-  </form>
+    <div class="kotak">
+      <form id="borang">
+        <label>Tarikh
+          <input id="date" type="date" required>
+        </label>
+        <label>Odometer (km)
+          <input id="odo" type="number" required>
+        </label>
+        <label>Jenis servis
+          <input id="type" placeholder="cth. Tukar minyak enjin" required>
+        </label>
+        <label>Kos (RM)
+          <input id="cost" type="number" step="0.01" required>
+        </label>
+        <button type="submit">Simpan</button>
+      </form>
+    </div>
 
-  <h2>Sejarah servis</h2>
-  <table border="1" cellpadding="6">
-    <thead>
-      <tr><th>Tarikh</th><th>Odometer</th><th>Servis</th><th>Kos</th><th></th></tr>
-    </thead>
-    <tbody id="senarai"></tbody>
-  </table>
-  <p>Jumlah kos: <b id="jumlah">RM 0.00</b></p>
+    <div class="kotak">
+      <h2 style="margin-top:0">Sejarah servis</h2>
+      <div class="jadual">
+        <table>
+          <thead>
+            <tr><th>Tarikh</th><th>Odometer</th><th>Servis</th><th>Kos</th><th></th></tr>
+          </thead>
+          <tbody id="senarai"></tbody>
+        </table>
+      </div>
+      <p class="jumlah">Jumlah kos: <b id="jumlah">RM 0.00</b></p>
+    </div>
+  </div>
 
   <script>
     let rekod = JSON.parse(localStorage.getItem("rekod")) || [];
@@ -56,14 +124,13 @@
       rekod.forEach(function (r, i) {
         tbody.innerHTML += "<tr><td>" + r.date + "</td><td>" + r.odo +
           " km</td><td>" + r.type + "</td><td>RM " + r.cost.toFixed(2) +
-          "</td><td><button onclick='padam(" + i + ")'>Padam</button></td></tr>";
+          "</td><td><button class='padam' onclick='padam(" + i + ")'>Padam</button></td></tr>";
         jumlah += r.cost;
       });
 
       document.getElementById("jumlah").textContent = "RM " + jumlah.toFixed(2);
     }
 
-    // BARU: buang satu rekod ikut nombor barisnya
     function padam(i) {
       if (confirm("Padam rekod ini?")) {
         rekod.splice(i, 1);
