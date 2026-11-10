@@ -1,4 +1,10 @@
- <style>
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rekod Servis</title>
+  <style>
     body {
       font-family: Arial, sans-serif;
       background: #eef1f2;
@@ -6,10 +12,7 @@
       margin: 0;
       padding: 16px;
     }
-    .bekas {
-      max-width: 700px;
-      margin: 0 auto;
-    }
+    .bekas { max-width: 700px; margin: 0 auto; }
     h1 { margin-top: 0; }
     .kotak {
       background: white;
@@ -48,28 +51,33 @@
       padding: 5px 10px;
       font-size: 14px;
     }
-    .jadual {
-      overflow-x: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
+    .jadual { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
     th, td {
       text-align: left;
       padding: 9px 8px;
       border-bottom: 1px solid #d3dbdf;
     }
     th { color: #5d6f78; font-size: 14px; }
-    .jumlah {
-      font-size: 18px;
-      margin: 12px 0 0;
-    }
+    .jumlah { font-size: 18px; margin: 12px 0 0; }
+
+    /* BARU: kotak ringkasan */
+    .ringkasan { border-left: 6px solid #2e7d4f; }
+    .ringkasan.hampir { border-left-color: #b45f06; }
+    .ringkasan.lewat { border-left-color: #b3261e; }
+    .ringkasan p { margin: 4px 0; }
+    .besar { font-size: 22px; font-weight: bold; }
   </style>
 </head>
 <body>
   <div class="bekas">
     <h1>Rekod Servis Kenderaan</h1>
+
+    <!-- BARU: kotak ringkasan -->
+    <div class="kotak ringkasan" id="ringkasan">
+      <p class="besar" id="tajukRingkasan"></p>
+      <p id="butirRingkasan"></p>
+    </div>
 
     <div class="kotak">
       <form id="borang">
@@ -84,6 +92,10 @@
         </label>
         <label>Kos (RM)
           <input id="cost" type="number" step="0.01" required>
+        </label>
+        <!-- BARU: ruang pilihan -->
+        <label>Servis seterusnya pada (km), tidak wajib
+          <input id="nextKm" type="number" placeholder="cth. 15000">
         </label>
         <button type="submit">Simpan</button>
       </form>
@@ -110,6 +122,54 @@
       localStorage.setItem("rekod", JSON.stringify(rekod));
     }
 
+    function nombor(n) {
+      return Number(n).toLocaleString("ms-MY");
+    }
+
+    // BARU: kira baki km ke servis seterusnya
+    function kemaskiniRingkasan() {
+      const kotak = document.getElementById("ringkasan");
+      const tajuk = document.getElementById("tajukRingkasan");
+      const butir = document.getElementById("butirRingkasan");
+      kotak.className = "kotak ringkasan";
+
+      if (rekod.length === 0) {
+        tajuk.textContent = "Belum ada rekod";
+        butir.textContent = "Isi borang di bawah untuk rekod servis pertama.";
+        return;
+      }
+
+      let odoTerkini = 0;
+      let nextKm = null;
+      let tarikhNext = "";
+
+      rekod.forEach(function (r) {
+        if (r.odo > odoTerkini) odoTerkini = r.odo;
+        // ambil sasaran servis dari rekod terbaru yang ada sasaran
+        if (r.nextKm && r.date >= tarikhNext) {
+          nextKm = r.nextKm;
+          tarikhNext = r.date;
+        }
+      });
+
+      if (nextKm === null) {
+        tajuk.textContent = "Odometer terkini: " + nombor(odoTerkini) + " km";
+        butir.textContent = "Servis seterusnya belum ditetapkan.";
+        return;
+      }
+
+      const baki = nextKm - odoTerkini;
+      if (baki < 0) {
+        kotak.className = "kotak ringkasan lewat";
+        tajuk.textContent = "Servis lewat " + nombor(-baki) + " km";
+      } else {
+        if (baki <= 1000) kotak.className = "kotak ringkasan hampir";
+        tajuk.textContent = "Baki " + nombor(baki) + " km ke servis seterusnya";
+      }
+      butir.textContent = "Odometer terkini " + nombor(odoTerkini) +
+        " km, servis seterusnya pada " + nombor(nextKm) + " km.";
+    }
+
     function papar() {
       const tbody = document.getElementById("senarai");
       tbody.innerHTML = "";
@@ -123,6 +183,7 @@
       });
 
       document.getElementById("jumlah").textContent = "RM " + jumlah.toFixed(2);
+      kemaskiniRingkasan();
     }
 
     function padam(i) {
@@ -136,11 +197,14 @@
     document.getElementById("borang").addEventListener("submit", function (e) {
       e.preventDefault();
 
+      const next = document.getElementById("nextKm").value;
+
       rekod.push({
         date: document.getElementById("date").value,
         odo: Number(document.getElementById("odo").value),
         type: document.getElementById("type").value,
-        cost: Number(document.getElementById("cost").value)
+        cost: Number(document.getElementById("cost").value),
+        nextKm: next ? Number(next) : null
       });
 
       simpan();
