@@ -35,34 +35,45 @@
   <h2>Sejarah servis</h2>
   <table border="1" cellpadding="6">
     <thead>
-      <tr><th>Tarikh</th><th>Odometer</th><th>Servis</th><th>Kos</th></tr>
+      <tr><th>Tarikh</th><th>Odometer</th><th>Servis</th><th>Kos</th><th></th></tr>
     </thead>
     <tbody id="senarai"></tbody>
   </table>
   <p>Jumlah kos: <b id="jumlah">RM 0.00</b></p>
 
   <script>
-    // 1. Ambil data lama (kalau ada)
     let rekod = JSON.parse(localStorage.getItem("rekod")) || [];
 
-    // 2. Papar data dalam jadual
+    function simpan() {
+      localStorage.setItem("rekod", JSON.stringify(rekod));
+    }
+
     function papar() {
       const tbody = document.getElementById("senarai");
       tbody.innerHTML = "";
       let jumlah = 0;
 
-      rekod.forEach(function (r) {
+      rekod.forEach(function (r, i) {
         tbody.innerHTML += "<tr><td>" + r.date + "</td><td>" + r.odo +
-          " km</td><td>" + r.type + "</td><td>RM " + r.cost.toFixed(2) + "</td></tr>";
+          " km</td><td>" + r.type + "</td><td>RM " + r.cost.toFixed(2) +
+          "</td><td><button onclick='padam(" + i + ")'>Padam</button></td></tr>";
         jumlah += r.cost;
       });
 
       document.getElementById("jumlah").textContent = "RM " + jumlah.toFixed(2);
     }
 
-    // 3. Bila butang Simpan ditekan
+    // BARU: buang satu rekod ikut nombor barisnya
+    function padam(i) {
+      if (confirm("Padam rekod ini?")) {
+        rekod.splice(i, 1);
+        simpan();
+        papar();
+      }
+    }
+
     document.getElementById("borang").addEventListener("submit", function (e) {
-      e.preventDefault(); // elak halaman refresh
+      e.preventDefault();
 
       rekod.push({
         date: document.getElementById("date").value,
@@ -71,12 +82,11 @@
         cost: Number(document.getElementById("cost").value)
       });
 
-      localStorage.setItem("rekod", JSON.stringify(rekod));
+      simpan();
       papar();
       e.target.reset();
     });
 
-    // 4. Papar data bila halaman dibuka
     papar();
   </script>
 </body>
