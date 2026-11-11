@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rekod Servis</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -60,12 +61,22 @@
     }
     th { color: #5d6f78; font-size: 14px; }
     .jumlah { font-size: 18px; margin: 12px 0 0; }
+    .butang-bawah { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 
     .ringkasan { border-left: 6px solid #2e7d4f; }
     .ringkasan.hampir { border-left-color: #b45f06; }
     .ringkasan.lewat { border-left-color: #b3261e; }
     .ringkasan p { margin: 4px 0; }
     .besar { font-size: 22px; font-weight: bold; }
+
+    #kotakQr { text-align: center; }
+    #qr { display: inline-block; padding: 12px; background: white; }
+
+    @media print {
+      form, button, .ringkasan, #kotakQr { display: none; }
+      body { background: white; }
+      .kotak { border: 0; }
+    }
   </style>
 </head>
 <body>
@@ -109,6 +120,17 @@
         </table>
       </div>
       <p class="jumlah">Jumlah kos: <b id="jumlah">RM 0.00</b></p>
+      <div class="butang-bawah">
+        <button id="hantar" type="button">Hantar ke telefon (QR)</button>
+        <button id="eksport" type="button">Muat turun CSV</button>
+        <button id="cetak" type="button">Cetak / Simpan PDF</button>
+      </div>
+    </div>
+
+    <div class="kotak" id="kotakQr" hidden>
+      <h2 style="margin-top:0">Imbas dengan kamera telefon</h2>
+      <div id="qr"></div>
+      <p id="infoQr"></p>
     </div>
   </div>
 
@@ -207,6 +229,87 @@
       e.target.reset();
     });
 
+    document.getElementById("eksport").addEventListener("click", function () {
+      let csv = "Tarikh,Odometer,Servis,Kos\n";
+      rekod.forEach(function (r) {
+        csv += r.date + "," + r.odo + ',"' + r.type.replace(/"/g, '""') + '",' + r.cost + "\n";
+      });
+      const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "rekod-servis.csv";
+      a.click();
+    });
+
+    document.getElementById("cetak").addEventListener("click", function () {
+      window.print();
+    });
+
+    // ===== BARU: hantar rekod ke telefon melalui QR =====
+    document.getElementById("hantar").addEventListener("click", function () {
+      const kotakQr = document.getElementById("kotakQr");
+      const qr = document.getElementById("qr");
+      const info = document.getElementById("infoQr");
+
+      if (rekod.length === 0) {
+        alert("Belum ada rekod untuk dihantar.");
+        return;
+      }
+
+      // Ringkaskan data: setiap rekod jadi satu senarai pendek
+      const padat = rekod.map(function (r) {
+        return [r.date, r.odo, r.type, r.cost, r.nextKm];
+      });
+      const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(padat))));
+      const url = location.origin + location.pathname + "#data=" + encodeURIComponent(b64);
+
+      if (url.length > 1800) {
+        alert("Rekod terlalu banyak untuk satu QR (" + rekod.length +
+          " rekod). Padam rekod yang sudah lama, atau guna Muat turun CSV.");
+        return;
+      }
+
+      qr.innerHTML = "";
+      new QRCode(qr, { text: url, width: 280, height: 280, correctLevel: QRCode.CorrectLevel.L });
+      info.textContent = rekod.length + " rekod dimasukkan dalam QR ini. Imbas dengan kamera telefon.";
+      kotakQr.hidden = false;
+      kotakQr.scrollIntoView({ behavior: "smooth" });
+    });
+
+    // ===== BARU: terima rekod bila QR diimbas =====
+    function terimaDariQr() {
+      if (location.hash.indexOf("#data=") !== 0) return;
+
+      try {
+        const b64 = decodeURIComponent(location.hash.slice(6));
+        const json = decodeURIComponent(escape(atob(b64)));
+        const padat = JSON.parse(json);
+        let baru = 0;
+
+        padat.forEach(function (p) {
+          const ada = rekod.some(function (r) {
+            return r.date === p[0] && r.odo === p[1] && r.type === p[2] && r.cost === p[3];
+          });
+          if (!ada) {
+            rekod.push({ date: p[0], odo: p[1], type: p[2], cost: p[3], nextKm: p[4] });
+            baru++;
+          }
+        });
+
+        if (baru > 0) {
+          simpan();
+          alert(baru + " rekod berjaya dimasukkan.");
+        } else {
+          alert("Semua rekod ini sudah ada.");
+        }
+      } catch (err) {
+        alert("QR ini tidak sah atau rosak.");
+      }
+
+      history.replaceState(null, "", location.pathname);
+    }
+
+    terimaDariQr();
     papar();
   </script>
 </body>
